@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SPOTPOTES - Tes moments entre potes 🗺️</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU1BPVFBPVEVTIIWIC2hvcnRfbmFtZSI6IlNQT1RQT1RFUyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMTIxMjEyIiwidGhlbWVfY29sb3IiOiIjMTIxMjEyIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCwlM0NzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMTAwIDEwMCclM0UlM0N0ZXh0IHk9Jy45ZW0nIGZvbnQtc2l6ZT0nOTAnJTNFJUYwJTlGJTkzJThEJTNDL3RleHQlM0UlM0Mvc3ZnJTNFIiwic2l6ZXMiOiIxOTJ4MTkyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwifV19">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --primary: #FF6B9D;
+            --primary-dark: #E85A8A;
+            --secondary: #A47864;
+            --accent: #FFDD44;
+            --bg-dark: #121212;
+            --bg-card: rgba(30, 30, 30, 0.8);
+            --text-primary: #FFFFFF;
+            --text-secondary: #B0B0B0;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255, 107, 157, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(164, 120, 100, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, rgba(255, 221, 68, 0.1) 0%, transparent 50%);
+            animation: gradientShift 15s ease infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Spring animations */
+        @keyframes springIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(20px);
+            }
+            50% {
+                transform: scale(1.05) translateY(-5px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        /* Glassmorphism Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem;
+        }
+
+        .header-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo svg {
+            width: 40px;
+            height: 40px;
+            filter: drop-shadow(0 4px 8px rgba(255, 107, 157, 0.3));
+        }
+
+        .profile-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--primary);
+            opacity: 0.2;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+
+        .profile-btn:active::before {
+            width: 100px;
+            height: 100px;
+        }
+
+        .profile-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Container */
+        .container {
+            padding: 1.5rem 1rem;
+            padding-bottom: 100px;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Modern Category Cards with Glassmorphism */
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .categories > .category-card:nth-child(1) { grid-column: 1 / 3; }
+        .categories > .category-card:nth-child(2) { grid-column: 3 / 5; }
+        .categories > .category-card:nth-child(3) { grid-column: 5 / 7; }
+        .categories > .category-card:nth-child(4) { grid-column: 2 / 4; }
+        .categories > .category-card:nth-child(5) { grid-column: 4 / 6; }
+
+        .category-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 0.5rem 0.3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-card::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            opacity: 0;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s, opacity 0.5s;
+        }
+
+        .category-card:active::before {
+            width: 200px;
+            height: 200px;
+            opacity: 0.15;
+        }
+
+        .category-card:active {
+            transform: scale(0.95);
+        }
+
+        .category-lock-badge {
+            position: absolute;
+            top: 0.3rem;
+            right: 0.3rem;
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 0.2rem 0.35rem;
+            border-radius: 6px;
+        }
+
+        .category-icon {
+            width: 100%;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 0.3rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .category-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-count {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 0.1rem;
+        }
+
+        /* Capture Button - Ultra Modern & Eye-catching */
+        .capture-btn {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+        }
+
+        .capture-btn-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .capture-btn-main {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B9D 0%, #FF8E53 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            position: relative;
+            box-shadow: 0 15px 50px rgba(255, 107, 157, 0.6),
+                        0 5px 15px rgba(255, 107, 157, 0.4),
+                        inset 0 -3px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .capture-btn-main::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.4) 0%, rgba(255, 142, 83, 0.4) 100%);
+            animation: pulseRing 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .capture-btn-main::after {
+            content: '';
+            position: absolute;
+            inset: -16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.2) 0%, rgba(255, 142, 83, 0.2) 100%);
+            animation: pulseRing 2s ease-in-out infinite 0.5s;
+            z-index: -2;
+        }
+
+        @keyframes pulseRing {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: scale(1.15);
+                opacity: 0;
+            }
+        }
+
+        .capture-btn-icon {
+            font-size: 2.8rem;
+            font-weight: 300;
+            color: white;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            animation: iconFloat 3s ease-in-out infinite;
+            line-height: 0.8;
+            margin-top: -4px;
+        }
+
+        .capture-btn-text {
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+            margin-top: -2px;
+        }
+
+        @keyframes iconFloat {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-3px) rotate(-5deg);
+            }
+            75% {
+                transform: translateY(3px) rotate(5deg);
+            }
+        }
+
+        .capture-btn-main:active {
+            transform: scale(0.9);
+            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.5);
+        }
+
+        .capture-btn-label {
+            position: absolute;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            white-space: nowrap;
+            color: var(--primary);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            animation: labelPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes labelPulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Sparkles effect */
+        .sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: sparkleFloat 3s ease-in-out infinite;
+        }
+
+        .sparkle:nth-child(1) {
+            top: 10%;
+            left: 20%;
+            animation-delay: 0s;
+        }
+
+        .sparkle:nth-child(2) {
+            top: 20%;
+            right: 15%;
+            animation-delay: 0.5s;
+        }
+
+        .sparkle:nth-child(3) {
+            bottom: 15%;
+            left: 15%;
+            animation-delay: 1s;
+        }
+
+        .sparkle:nth-child(4) {
+            bottom: 20%;
+            right: 20%;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes sparkleFloat {
+            0%, 100% {
+                opacity: 0;
+                transform: translateY(0) scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: translateY(-10px) scale(1);
+            }
+        }
+
+        /* Bottom Navigation - Glassmorphism */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px) saturate(180%);
+            border-top: 1px solid var(--glass-border);
+            padding: 0.8rem 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            cursor: pointer;
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px 3px 0 0;
+            transition: width 0.3s;
+        }
+
+        .nav-item.active::before {
+            width: 30px;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 107, 157, 0.1);
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .nav-item.active .nav-icon {
+            transform: scale(1.15);
+        }
+
+        .nav-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .nav-item.active .nav-label {
+            color: var(--primary);
+        }
+
+        /* Gallery Grid - Modern Cards */
+        .gallery-tabs {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            scrollbar-width: none;
+        }
+
+        .gallery-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.8rem;
+        }
+
+        .moment-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: springIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .moment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.3);
+        }
+
+        .moment-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            position: relative;
+        }
+
+        .moment-info {
+            padding: 0.6rem;
+        }
+
+        .moment-category {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .moment-location {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .moment-date {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Map Container */
+        #map {
+            height: 70vh;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Modal - Modern Glassmorphism */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 1.5rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: springIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .close-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 107, 157, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.95);
+        }
+
+        /* Camera Preview */
+        #cameraPreview {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 16px;
+            margin-bottom: 1rem;
+            object-fit: cover;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--bg-card);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .toast-message {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            animation: springIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Achievement Card */
+        .achievement-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            animation: springIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .achievement-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .achievement-icon {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        .achievement-info {
+            flex: 1;
+        }
+
+        .achievement-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .achievement-level {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .achievement-count {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .max-level {
+            text-align: center;
+            padding: 0.6rem;
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.15) 0%, rgba(255, 221, 68, 0.15) 100%);
+            border-radius: 12px;
+            margin-top: 0.5rem;
+        }
+
+        .max-level-text {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Settings */
+        .setting-item {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 28px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .toggle-knob {
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active .toggle-knob {
+            left: 24px;
+        }
+
+        /* Custom Leaflet Popup */
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: var(--bg-card);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .custom-popup .leaflet-popup-tip {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+        }
+
+        .popup-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .popup-content {
+            padding: 0.8rem;
+        }
+
+        .popup-category {
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: var(--primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .popup-location {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.2rem;
+        }
+
+        .popup-caption {
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Hidden elements */
+        #cameraInput {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .categories {
+                gap: 0.3rem;
+            }
+            
+            .category-card {
+                padding: 0.4rem 0.2rem;
+            }
+            
+            .category-icon {
+                font-size: 1.7rem;
+            }
+            
+            .category-label {
+                font-size: 0.65rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-icon" id="toastIcon"></div>
+        <div class="toast-message" id="toastMessage"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- S Letter -->
+                    <path d="M 20 25 Q 20 15, 30 15 L 45 15 Q 55 15, 55 25 Q 55 35, 45 35 L 30 35 Q 20 35, 20 45 Q 20 55, 30 55 L 45 55 Q 55 55, 55 65" 
+                          fill="none" stroke="url(#gradient1)" stroke-width="6" stroke-linecap="round"/>
+                    
+                    <!-- P Letter forming table leg -->
+                    <path d="M 65 25 L 65 75 M 65 25 L 80 25 Q 90 25, 90 35 Q 90 45, 80 45 L 65 45" 
+                          fill="none" stroke="url(#gradient2)" stroke-width="6" stroke-linecap="round"/>
+                    
+                    <!-- Table top connecting S and P -->
+                    <line x1="25" y1="20" x2="85" y2="20" stroke="url(#gradient3)" stroke-width="4" stroke-linecap="round"/>
+                    
+                    <defs>
+                        <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FFDD44;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#A47864;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FF6B9D;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#FFDD44;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#A47864;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                SpotPotes
+            </div>
+            <div class="profile-btn" onclick="openSettings()">⚙️</div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Home View -->
+        <div id="homeView" class="view active">
+            <div class="categories">
+                <div class="category-card" onclick="filterGallery('bars')">
+                    <img src="https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&h=200&fit=crop" alt="Bars" class="category-icon">
+                    <div class="category-label">Bars</div>
+                    <div class="category-count" id="barsCount">0 spots</div>
+                </div>
+                <div class="category-card" onclick="filterGallery('restos')">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300&h=200&fit=crop" alt="Restos" class="category-icon">
+                    <div class="category-label">Restos</div>
+                    <div class="category-count" id="restosCount">0 spots</div>
+                </div>
+                <div class="category-card" onclick="filterGallery('toits')">
+                    <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop" alt="Toits" class="category-icon">
+                    <div class="category-label">Toits</div>
+                    <div class="category-count" id="toitsCount">0 spots</div>
+                </div>
+                <div class="category-card" onclick="filterGallery('vue')">
+                    <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop" alt="Vue" class="category-icon">
+                    <div class="category-label">Vue</div>
+                    <div class="category-count" id="vueCount">0 spots</div>
+                </div>
+                <div class="category-card" onclick="checkInsolitesAccess()">
+                    <div class="category-lock-badge" id="insolitesLock">🔒</div>
+                    <img src="https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=300&h=200&fit=crop" alt="Insolites" class="category-icon">
+                    <div class="category-label">Insolites</div>
+                    <div class="category-count" id="insolitesCount">0 spots</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery View -->
+        <div id="galleryView" class="view">
+            <div class="gallery-tabs">
+                <div class="tab-btn active" data-category="all" onclick="switchGalleryTab('all')">
+                    <span>🌟</span> Tous
+                </div>
+                <div class="tab-btn" data-category="bars" onclick="switchGalleryTab('bars')">
+                    <span>🍹</span> Bars
+                </div>
+                <div class="tab-btn" data-category="restos" onclick="switchGalleryTab('restos')">
+                    <span>🍕</span> Restos
+                </div>
+                <div class="tab-btn" data-category="toits" onclick="switchGalleryTab('toits')">
+                    <span>🏠</span> Toits
+                </div>
+                <div class="tab-btn" data-category="vue" onclick="switchGalleryTab('vue')">
+                    <span>🌄</span> Vue
+                </div>
+                <div class="tab-btn" data-category="insolites" onclick="switchGalleryTab('insolites')">
+                    <span>🍑</span> Insolites
+                </div>
+            </div>
+            <div class="gallery-grid" id="galleryGrid"></div>
+        </div>
+
+        <!-- Map View -->
+        <div id="mapView" class="view">
+            <div id="map"></div>
+        </div>
+
+        <!-- Stats View -->
+        <div id="statsView" class="view">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMoments">0</div>
+                    <div class="stat-label">Total Spots</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="favoriteCategory">-</div>
+                    <div class="stat-label">Catégorie préférée</div>
+                </div>
+            </div>
+            <div id="achievementsContainer"></div>
+        </div>
+    </div>
+
+    <!-- Capture Button - Ultra Modern -->
+    <div class="capture-btn">
+        <div class="capture-btn-wrapper">
+            <button class="capture-btn-main" onclick="startCapture()">
+                <span class="capture-btn-icon">+</span>
+                <span class="capture-btn-text">NEW SPOT</span>
+            </button>
+            <div class="capture-btn-label">✨ Nouveau Spot</div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-container">
+            <div class="nav-item active" onclick="switchView('home')">
+                <div class="nav-icon">🏠</div>
+                <div class="nav-label">Accueil</div>
+            </div>
+            <div class="nav-item" onclick="switchView('gallery')">
+                <div class="nav-icon">🖼️</div>
+                <div class="nav-label">Galerie</div>
+            </div>
+            <div class="nav-item" onclick="switchView('map')">
+                <div class="nav-icon">🗺️</div>
+                <div class="nav-label">Carte</div>
+            </div>
+            <div class="nav-item" onclick="switchView('stats')">
+                <div class="nav-icon">📊</div>
+                <div class="nav-label">Stats</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capture Modal -->
+    <div class="modal" id="captureModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">📸 Nouveau Spot</div>
+                <div class="close-btn" onclick="closeCaptureModal()">✕</div>
+            </div>
+            
+            <input type="file" id="cameraInput" accept="image/*" capture="environment">
+            <img id="cameraPreview" style="display: none;">
+            
+            <div class="form-group">
+                <label class="form-label">Catégorie *</label>
+                <select class="form-input" id="categorySelect">
+                    <option value="">Sélectionne une catégorie...</option>
+                    <option value="bars">🍹 Bars</option>
+                    <option value="restos">🍕 Restos</option>
+                    <option value="toits">🏠 Toits</option>
+                    <option value="vue">🌄 Vue imprenable</option>
+                    <option value="insolites">🍑 Insolites</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Légende (optionnel)</label>
+                <textarea class="form-textarea" id="captionInput" placeholder="Décris ce moment..."></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 0.8rem;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="retakePhoto()">
+                    🔄 Reprendre
+                </button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="saveMoment()">
+                    ✅ Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ Paramètres</div>
+                <div class="close-btn" onclick="closeSettings()">✕</div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">🔒 Protéger Insolites</div>
+                <div class="toggle-switch" id="protectInsolitesToggle" onclick="toggleProtectInsolites()">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="exportData()">
+                💾 Exporter mes données
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Configuration des catégories
+        const categoryConfig = {
+            bars: { icon: '🍹', label: 'Bars', color: '#FF6B9D' },
+            restos: { icon: '🍕', label: 'Restos', color: '#FFDD44' },
+            toits: { icon: '🏠', label: 'Toits', color: '#A47864' },
+            vue: { icon: '🌄', label: 'Vue imprenable', color: '#E2725B' },
+            insolites: { icon: '🍑', label: 'Insolites', color: '#FF6B9D' }
+        };
+
+        // Configuration des achievements
+        const achievementLevels = {
+            bars: [
+                { threshold: 0, name: "Casanier(ère)", icon: "🏠" },
+                { threshold: 3, name: "Explorateur de bars", icon: "🍺" },
+                { threshold: 7, name: "Connaisseur", icon: "🍸" },
+                { threshold: 15, name: "Expert cocktails", icon: "🍹" },
+                { threshold: 25, name: "Prêt(e) à ouvrir le sien", icon: "🎉" }
+            ],
+            restos: [
+                { threshold: 0, name: "Débutant(e)", icon: "🍽️" },
+                { threshold: 5, name: "Gourmet", icon: "🍕" },
+                { threshold: 10, name: "Foodie confirmé", icon: "🍝" },
+                { threshold: 20, name: "Critique culinaire", icon: "⭐" },
+                { threshold: 30, name: "Chef étoilé", icon: "👨‍🍳" }
+            ],
+            toits: [
+                { threshold: 0, name: "Sans-abri", icon: "🏚️" },
+                { threshold: 2, name: "Campeur", icon: "⛺" },
+                { threshold: 5, name: "Voyageur", icon: "🎒" },
+                { threshold: 10, name: "Globe-trotter", icon: "✈️" },
+                { threshold: 20, name: "Collectionneur d'adresses", icon: "🏨" }
+            ],
+            vue: [
+                { threshold: 0, name: "Myope", icon: "👓" },
+                { threshold: 3, name: "Admirateur", icon: "😍" },
+                { threshold: 7, name: "Chasseur de vues", icon: "📸" },
+                { threshold: 15, name: "Photographe pro", icon: "📷" },
+                { threshold: 25, name: "National Geographic", icon: "🌍" }
+            ],
+            insolites: [
+                { threshold: 0, name: "Conformiste", icon: "😐" },
+                { threshold: 2, name: "Curieux", icon: "🤔" },
+                { threshold: 5, name: "Aventurier", icon: "🧭" },
+                { threshold: 10, name: "Explorateur du bizarre", icon: "🔍" },
+                { threshold: 20, name: "Indiana Jones de l'insolite", icon: "🎩" }
+            ]
+        };
+
+        // State
+        let moments = [];
+        let currentPhotoData = null;
+        let currentCategory = 'all';
+        let isInsolitesUnlocked = false;
+        let mapInstance = null;
+        let markers = [];
+
+        // Initialize
+        function init() {
+            loadMoments();
+            updateStats();
+            updateGallery();
+            
+            // Camera input handler
+            document.getElementById('cameraInput').addEventListener('change', handlePhotoCapture);
+            
+            // Load settings
+            const protectInsolites = localStorage.getItem('protectInsolites') === 'true';
+            if (protectInsolites) {
+                document.getElementById('protectInsolitesToggle').classList.add('active');
+            }
+        }
+
+        // Storage functions
+        function loadMoments() {
+            const stored = localStorage.getItem('spotpotes_moments');
+            if (stored) {
+                moments = JSON.parse(stored);
+            }
+        }
+
+        function saveMoments() {
+            localStorage.setItem('spotpotes_moments', JSON.stringify(moments));
+        }
+
+        // Navigation
+        function switchView(view) {
+            // Update views
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(view + 'View').classList.add('active');
+            
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            // Special actions
+            if (view === 'map') {
+                setTimeout(initMap, 100);
+            } else if (view === 'stats') {
+                updateStats();
+            } else if (view === 'gallery') {
+                updateGallery();
+            }
+        }
+
+        // Capture flow
+        function startCapture() {
+            document.getElementById('cameraInput').click();
+        }
+
+        function handlePhotoCapture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentPhotoData = e.target.result;
+                document.getElementById('cameraPreview').src = currentPhotoData;
+                document.getElementById('cameraPreview').style.display = 'block';
+                document.getElementById('captureModal').classList.add('active');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function retakePhoto() {
+            document.getElementById('cameraInput').value = '';
+            document.getElementById('cameraInput').click();
+        }
+
+        function closeCaptureModal() {
+            document.getElementById('captureModal').classList.remove('active');
+            document.getElementById('categorySelect').value = '';
+            document.getElementById('captionInput').value = '';
+            document.getElementById('cameraPreview').style.display = 'none';
+            currentPhotoData = null;
+        }
+
+        function saveMoment() {
+            const category = document.getElementById('categorySelect').value;
+            const caption = document.getElementById('captionInput').value;
+            
+            if (!category) {
+                showToast('⚠️', 'Sélectionne une catégorie');
+                return;
+            }
+            
+            if (!currentPhotoData) {
+                showToast('⚠️', 'Aucune photo capturée');
+                return;
+            }
+            
+            // Get location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        createMoment(category, caption, position.coords);
+                    },
+                    () => {
+                        createMoment(category, caption, null);
+                    }
+                );
+            } else {
+                createMoment(category, caption, null);
+            }
+        }
+
+        function createMoment(category, caption, coords) {
+            const moment = {
+                id: Date.now(),
+                photo: currentPhotoData,
+                category: category,
+                caption: caption,
+                date: new Date().toISOString(),
+                position: coords ? {
+                    lat: coords.latitude,
+                    lng: coords.longitude
+                } : null,
+                location: 'Position inconnue'
+            };
+            
+            // Get location name
+            if (coords) {
+                fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`)
+                    .then(r => r.json())
+                    .then(data => {
+                        moment.location = data.address.city || data.address.town || data.address.village || 'Position inconnue';
+                        moments.unshift(moment);
+                        saveMoments();
+                        updateStats();
+                        updateGallery();
+                        closeCaptureModal();
+                        showToast('✅', 'Spot enregistré !');
+                    })
+                    .catch(() => {
+                        moments.unshift(moment);
+                        saveMoments();
+                        updateStats();
+                        updateGallery();
+                        closeCaptureModal();
+                        showToast('✅', 'Spot enregistré !');
+                    });
+            } else {
+                moments.unshift(moment);
+                saveMoments();
+                updateStats();
+                updateGallery();
+                closeCaptureModal();
+                showToast('✅', 'Spot enregistré !');
+            }
+        }
+
+        // Gallery
+        function filterGallery(category) {
+            switchView('gallery');
+            switchGalleryTab(category);
+        }
+
+        function switchGalleryTab(category) {
+            currentCategory = category;
+            
+            // Update tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.category === category) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            updateGallery();
+        }
+
+        function updateGallery() {
+            const grid = document.getElementById('galleryGrid');
+            const filtered = currentCategory === 'all' 
+                ? moments 
+                : moments.filter(m => m.category === currentCategory);
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📸</div>
+                        <h3>Aucun spot</h3>
+                        <p>Capture ton premier moment !</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = filtered.map(moment => {
+                const date = new Date(moment.date);
+                const formattedDate = date.toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short'
+                });
+                
+                return `
+                    <div class="moment-card" onclick="viewMoment(${moment.id})">
+                        <img src="${moment.photo}" class="moment-image" alt="${moment.category}">
+                        <div class="moment-info">
+                            <div class="moment-category">
+                                ${categoryConfig[moment.category].icon} ${categoryConfig[moment.category].label}
+                            </div>
+                            <div class="moment-location">
+                                📍 ${moment.location}
+                            </div>
+                            <div class="moment-date">
+                                📅 ${formattedDate}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewMoment(id) {
+            const moment = moments.find(m => m.id === id);
+            if (!moment) return;
+            
+            // TODO: Implement detail view modal
+            showToast('ℹ️', 'Détail du moment');
+        }
+
+        // Map
+        function initMap() {
+            const mapDiv = document.getElementById('map');
+            
+            if (mapInstance) {
+                mapInstance.remove();
+                mapInstance = null;
+            }
+            
+            const geoMoments = moments.filter(m => m.position && m.position.lat && m.position.lng);
+            
+            if (geoMoments.length === 0) {
+                mapDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📍</div>
+                        <h3>Pas de positions GPS</h3>
+                        <p>Active la géolocalisation pour voir tes spots</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            mapDiv.innerHTML = '';
+            
+            const bounds = geoMoments.map(m => [m.position.lat, m.position.lng]);
+            
+            mapInstance = L.map('map', {
+                zoomControl: true,
+                attributionControl: false
+            });
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+            }).addTo(mapInstance);
+            
+            markers = [];
+            geoMoments.forEach(moment => {
+                const iconHtml = `
+                    <div style="
+                        background: ${categoryConfig[moment.category].color};
+                        width: 45px;
+                        height: 45px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 1.8rem;
+                        border: 4px solid white;
+                        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                    ">
+                        ${categoryConfig[moment.category].icon}
+                    </div>
+                `;
+                
+                const customIcon = L.divIcon({
+                    html: iconHtml,
+                    className: 'custom-marker',
+                    iconSize: [45, 45],
+                    iconAnchor: [22.5, 22.5],
+                    popupAnchor: [0, -22.5]
+                });
+                
+                const marker = L.marker([moment.position.lat, moment.position.lng], {
+                    icon: customIcon
+                }).addTo(mapInstance);
+                
+                const date = new Date(moment.date);
+                const formattedDate = date.toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                });
+                
+                const popupContent = `
+                    <img src="${moment.photo}" class="popup-image" alt="${moment.category}">
+                    <div class="popup-content">
+                        <div class="popup-category">${categoryConfig[moment.category].icon} ${categoryConfig[moment.category].label}</div>
+                        <div class="popup-location">📍 ${moment.location}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);">📅 ${formattedDate}</div>
+                        ${moment.caption ? `<div class="popup-caption">${moment.caption}</div>` : ''}
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent, {
+                    maxWidth: 220,
+                    className: 'custom-popup'
+                });
+                
+                markers.push(marker);
+            });
+            
+            if (bounds.length === 1) {
+                mapInstance.setView(bounds[0], 13);
+            } else {
+                mapInstance.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // Stats and achievements
+        function updateStats() {
+            // Update counts
+            const counts = {
+                bars: moments.filter(m => m.category === 'bars').length,
+                restos: moments.filter(m => m.category === 'restos').length,
+                toits: moments.filter(m => m.category === 'toits').length,
+                vue: moments.filter(m => m.category === 'vue').length,
+                insolites: moments.filter(m => m.category === 'insolites').length
+            };
+            
+            document.getElementById('barsCount').textContent = `${counts.bars} spots`;
+            document.getElementById('restosCount').textContent = `${counts.restos} spots`;
+            document.getElementById('toitsCount').textContent = `${counts.toits} spots`;
+            document.getElementById('vueCount').textContent = `${counts.vue} spots`;
+            document.getElementById('insolitesCount').textContent = `${counts.insolites} spots`;
+            
+            // Update total
+            document.getElementById('totalMoments').textContent = moments.length;
+            
+            // Update favorite category
+            const maxCategory = Object.entries(counts).reduce((a, b) => counts[a[0]] > counts[b[0]] ? a : b);
+            document.getElementById('favoriteCategory').textContent = 
+                counts[maxCategory[0]] > 0 ? categoryConfig[maxCategory[0]].icon : '-';
+            
+            // Update achievements
+            updateAchievements();
+            
+            // Update lock badge
+            const protectInsolites = localStorage.getItem('protectInsolites') === 'true';
+            const lockBadge = document.getElementById('insolitesLock');
+            if (protectInsolites && !isInsolitesUnlocked) {
+                lockBadge.style.display = 'block';
+            } else {
+                lockBadge.style.display = 'none';
+            }
+        }
+
+        function calculateAchievements() {
+            const achievements = [];
+            
+            Object.keys(categoryConfig).forEach(category => {
+                const count = moments.filter(m => m.category === category).length;
+                const levels = achievementLevels[category];
+                
+                // Find current level
+                let currentLevel = levels[0];
+                for (let i = levels.length - 1; i >= 0; i--) {
+                    if (count >= levels[i].threshold) {
+                        currentLevel = levels[i];
+                        break;
+                    }
+                }
+                
+                // Find next level
+                const currentIndex = levels.indexOf(currentLevel);
+                const nextLevel = currentIndex < levels.length - 1 ? levels[currentIndex + 1] : null;
+                
+                // Calculate progress
+                let progressPercent = 100;
+                if (nextLevel) {
+                    const progress = count - currentLevel.threshold;
+                    const total = nextLevel.threshold - currentLevel.threshold;
+                    progressPercent = Math.min(100, (progress / total) * 100);
+                }
+                
+                achievements.push({
+                    category,
+                    categoryIcon: categoryConfig[category].icon,
+                    categoryLabel: categoryConfig[category].label,
+                    count,
+                    currentLevel,
+                    nextLevel,
+                    progressPercent
+                });
+            });
+            
+            return achievements;
+        }
+
+        function updateAchievements() {
+            const container = document.getElementById('achievementsContainer');
+            const achievements = calculateAchievements();
+            
+            container.innerHTML = achievements.map(ach => `
+                <div class="achievement-card">
+                    <div class="achievement-header">
+                        <div class="achievement-icon">${ach.categoryIcon}</div>
+                        <div class="achievement-info">
+                            <div class="achievement-name">${ach.categoryLabel}</div>
+                            <div class="achievement-level">${ach.currentLevel.icon} ${ach.currentLevel.name}</div>
+                        </div>
+                        <div class="achievement-count">${ach.count}</div>
+                    </div>
+                    ${ach.nextLevel ? `
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${ach.progressPercent}%"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span>${ach.count}/${ach.nextLevel.threshold}</span>
+                            <span>🎯 ${ach.nextLevel.icon} ${ach.nextLevel.name}</span>
+                        </div>
+                    ` : `
+                        <div class="max-level">
+                            <div class="max-level-text">🏆 Niveau MAX !</div>
+                        </div>
+                    `}
+                </div>
+            `).join('');
+        }
+
+        // Insolites protection
+        function checkInsolitesAccess() {
+            const protectInsolites = localStorage.getItem('protectInsolites') === 'true';
+            
+            if (protectInsolites && !isInsolitesUnlocked) {
+                const pin = prompt('🔒 Code PIN pour accéder aux Insolites :');
+                if (pin === '1234') {
+                    isInsolitesUnlocked = true;
+                    showToast('🔓', 'Insolites déverrouillés !');
+                    filterGallery('insolites');
+                } else {
+                    showToast('❌', 'Code incorrect');
+                }
+            } else {
+                filterGallery('insolites');
+            }
+        }
+
+        // Settings
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function toggleProtectInsolites() {
+            const toggle = document.getElementById('protectInsolitesToggle');
+            toggle.classList.toggle('active');
+            
+            const isActive = toggle.classList.contains('active');
+            localStorage.setItem('protectInsolites', isActive);
+            
+            if (isActive) {
+                showToast('🔒', 'Protection activée');
+                isInsolitesUnlocked = false;
+            } else {
+                showToast('🔓', 'Protection désactivée');
+                isInsolitesUnlocked = true;
+            }
+            
+            updateStats();
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(moments, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `spotpotes_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('💾', 'Données exportées !');
+        }
+
+        // Toast notification
+        function showToast(icon, message, duration = 2000) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastMessage').textContent = message;
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        // Initialize app
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
