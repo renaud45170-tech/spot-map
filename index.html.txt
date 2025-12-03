@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>SPOTPOTES</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* --- IMPORTS & VARS --- */
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg: #FAFAFA;
+            --surface: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #9CA3AF;
+            --primary: #111827; /* Noir élégant comme Instagram/Apple */
+            --accent: #FF385C;  /* Rouge type Airbnb/Pinterest pour les likes/actions */
+            --border: #F3F4F6;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-float: 0 10px 40px -10px rgba(0,0,0,0.15);
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        /* --- RESET --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            position: fixed; width: 100%;
+        }
+
+        /* --- ICONS (SVG) --- */
+        .icon { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-sm { width: 18px; height: 18px; }
+        .icon-fill { fill: currentColor; stroke: none; }
+
+        /* --- LAYOUT --- */
+        .app-shell {
+            height: 100%;
+            display: flex; flex-direction: column;
+            padding-top: var(--safe-top);
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            padding-bottom: calc(80px + var(--safe-bottom));
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* --- HEADER --- */
+        .header {
+            padding: 1rem 1.5rem;
+            background: var(--bg);
+            position: sticky; top: 0; z-index: 50;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .app-logo { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+        .avatar-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #eee; overflow: hidden; cursor: pointer;
+        }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* --- STORIES / CATEGORIES (Instagram Style) --- */
+        .categories-scroll {
+            display: flex; gap: 1rem;
+            padding: 0 1.5rem 1.5rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .categories-scroll::-webkit-scrollbar { display: none; }
+
+        .cat-pill {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            cursor: pointer; flex-shrink: 0;
+        }
+        .cat-circle {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .cat-pill.active .cat-circle {
+            border-color: var(--text-main);
+            transform: scale(1.05);
+        }
+        /* Petit point de notif */
+        .cat-badge {
+            position: absolute; bottom: 0; right: 0;
+            background: var(--text-main); color: white;
+            font-size: 0.6rem; padding: 2px 6px; border-radius: 10px;
+            border: 2px solid var(--surface);
+        }
+        .cat-label { font-size: 0.75rem; font-weight: 500; color: var(--text-main); }
+
+        /* --- FEED (Pinterest Masonry) --- */
+        .masonry-grid {
+            column-count: 2;
+            column-gap: 1rem;
+            padding: 0 1rem;
+        }
+        
+        .spot-card {
+            break-inside: avoid;
+            margin-bottom: 1rem;
+            background: var(--surface);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            position: relative;
+            /* Pas d'ombre portée par défaut pour un look "flat" propre */
+            transition: transform 0.2s;
+        }
+        .spot-card:active { transform: scale(0.98); }
+
+        .spot-img {
+            width: 100%;
+            display: block;
+            border-radius: var(--radius-md); /* Image arrondie elle-même */
+            background: #eee;
+        }
+        
+        /* Gradient overlay en bas de l'image pour le texte */
+        .spot-overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+            padding: 2rem 0.8rem 0.8rem;
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+        }
+        
+        .spot-title { color: white; font-weight: 600; font-size: 0.9rem; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .spot-meta { display: flex; align-items: center; gap: 4px; color: rgba(255,255,255,0.8); font-size: 0.7rem; margin-top: 2px; }
+
+        /* --- MAP VIEW --- */
+        .map-wrapper {
+            height: 100%; width: 100%;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            position: relative;
+        }
+        #map { height: 100%; width: 100%; }
+
+        /* --- BOTTOM NAV --- */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            padding-bottom: var(--safe-bottom);
+            height: calc(60px + var(--safe-bottom));
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 100;
+        }
+        .nav-item {
+            color: var(--text-muted);
+            padding: 10px;
+            transition: color 0.2s;
+        }
+        .nav-item.active { color: var(--text-main); }
+        
+        /* Floating Add Button */
+        .fab-btn {
+            background: var(--text-main);
+            color: white;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transform: translateY(-20px); /* Flotte au dessus de la barre */
+        }
+        .fab-btn:active { transform: translateY(-20px) scale(0.9); }
+
+        /* --- MODALS (Bottom Sheet Style) --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            z-index: 200; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .bottom-sheet {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--surface);
+            border-radius: 30px 30px 0 0;
+            padding: 1.5rem;
+            padding-bottom: calc(2rem + var(--safe-bottom));
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 201;
+        }
+        .modal-overlay.open .bottom-sheet { transform: translateY(0); }
+
+        .sheet-handle {
+            width: 40px; height: 4px; background: var(--border);
+            border-radius: 2px; margin: 0 auto 1.5rem;
+        }
+
+        .input-minimal {
+            width: 100%; padding: 1rem 0;
+            border: none; border-bottom: 1px solid var(--border);
+            font-size: 1.1rem; font-family: inherit;
+            background: transparent;
+            margin-bottom: 1rem;
+        }
+        .input-minimal:focus { outline: none; border-color: var(--text-main); }
+
+        .btn-full {
+            width: 100%; padding: 1rem;
+            background: var(--text-main); color: white;
+            border: none; border-radius: var(--radius-md);
+            font-weight: 600; font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* --- PROFILE --- */
+        .profile-header { padding: 2rem 1.5rem; text-align: center; }
+        .profile-img-lg {
+            width: 100px; height: 100px; border-radius: 50%;
+            object-fit: cover; margin-bottom: 1rem;
+            border: 4px solid var(--surface);
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-box { display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem; }
+        .stat-num { font-size: 1.2rem; font-weight: 700; display: block; }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* Views Utility */
+        .view { display: none; height: 100%; }
+        .view.active { display: block; animation: fadeUp 0.4s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        
+        <!-- HEADER -->
+        <header class="header">
+            <div class="app-logo">SPOTPOTES.</div>
+            <div class="avatar-btn" onclick="switchView('profile')">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&q=80" class="avatar-img" alt="Profile">
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            
+            <!-- HOME VIEW -->
+            <div id="view-home" class="view active">
+                
+                <!-- Stories / Categories -->
+                <div class="categories-scroll">
+                    <!-- Généré par JS -->
+                </div>
+
+                <div style="padding: 1rem 1.5rem 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 1.1rem; font-weight: 700;">Explorer</h2>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer;" onclick="switchView('map')">Voir carte</span>
+                </div>
+
+                <!-- Pinterest Grid -->
+                <div class="masonry-grid" id="feed-grid">
+                    <!-- Généré par JS -->
+                </div>
+            </div>
+
+            <!-- MAP VIEW -->
+            <div id="view-map" class="view" style="padding: 0 1rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Carte</h2>
+                <div class="map-wrapper" style="height: calc(100% - 60px);">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <!-- PROFILE VIEW -->
+            <div id="view-profile" class="view">
+                <div class="profile-header">
+                    <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80" class="profile-img-lg">
+                    <h2 style="font-size: 1.5rem;">Alex</h2>
+                    <p style="color: var(--text-muted);">@alex_explorer</p>
+                    
+                    <div class="stat-box">
+                        <div><span class="stat-num" id="stat-spots">0</span><span class="stat-label">Spots</span></div>
+                        <div><span class="stat-num">24</span><span class="stat-label">Potes</span></div>
+                        <div><span class="stat-num">1.2k</span><span class="stat-label">Likes</span></div>
+                    </div>
+                </div>
+                
+                <div style="padding: 0 1.5rem;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Mes Collections</h3>
+                    <div class="masonry-grid" id="profile-grid">
+                        <!-- Same items for demo -->
+                    </div>
+                    
+                    <button onclick="resetApp()" style="margin: 2rem auto; display: block; background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 0.8rem 1.5rem; border-radius: 50px; font-size: 0.9rem;">
+                        Réinitialiser l'app
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="switchView('home', this)">
+            <!-- Home Icon -->
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </div>
+        <div class="nav-item" onclick="switchView('map', this)">
+            <!-- Map Icon -->
+            <svg class="icon" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+        </div>
+        
+        <!-- FAB Middle -->
+        <div class="fab-btn" onclick="openAddModal()">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </div>
+
+        <div class="nav-item">
+            <!-- Heart Icon -->
+            <svg class="icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+        <div class="nav-item" onclick="switchView('profile', this)">
+            <!-- User Icon -->
+            <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+    </nav>
+
+    <!-- MODAL ADD SPOT (Bottom Sheet) -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="bottom-sheet">
+            <div class="sheet-handle"></div>
+            <h3 style="font-size: 1.25rem; margin-bottom: 1.5rem;">Nouveau Spot</h3>
+            
+            <!-- Photo Upload Area -->
+            <div style="margin-bottom: 1.5rem;" onclick="document.getElementById('file-input').click()">
+                <div id="photo-placeholder" style="width: 100%; height: 180px; background: #F3F4F6; border-radius: var(--radius-md); border: 2px dashed #D1D5DB; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg class="icon" style="color: var(--text-muted); width: 32px; height: 32px; margin-bottom: 8px;" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">Ajouter une photo</span>
+                </div>
+                <img id="preview-img" style="display: none; width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-md);">
+                <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFile(this)">
+            </div>
+
+            <input type="text" class="input-minimal" id="spot-name" placeholder="Nom du lieu (ex: Le Perchoir)">
+            
+            <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 1rem; scrollbar-width: none;">
+                <!-- Tags sélectionnables -->
+                <button class="tag-btn active" onclick="selectCat('bar', this)" style="padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); white-space: nowrap;">🍸 Bar</button>
+                <button class="tag-btn" onclick="selectCat('food', this)" style="padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); white-space: nowrap;">🍕 Food</button>
+                <button class="tag-btn" onclick="selectCat('view', this)" style="padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); white-space: nowrap;">📸 Vue</button>
+                <button class="tag-btn" onclick="selectCat('art', this)" style="padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); white-space: nowrap;">🎨 Art</button>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn-full" style="background: var(--border); color: var(--text-main);" onclick="closeAddModal()">Annuler</button>
+                <button class="btn-full" onclick="saveSpot()">Publier</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEAFLET JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- CONFIG & DATA ---
+        // Catégories style "Instagram Stories"
+        const CATEGORIES = {
+            all:  { label: 'Tout', icon: '✨' },
+            bar:  { label: 'Bars', icon: '🍸' },
+            food: { label: 'Food', icon: '🍕' },
+            view: { label: 'Vues', icon: '📸' },
+            art:  { label: 'Art',  icon: '🎨' },
+            chill:{ label: 'Chill',icon: '☕' }
+        };
+
+        const INITIAL_DATA = [
+            { id: 1, name: 'Secret Garden', cat: 'view', img: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=500&q=80', likes: 42 },
+            { id: 2, name: 'Neon Bar', cat: 'bar', img: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=500&q=80', likes: 128 },
+            { id: 3, name: 'Brunch Club', cat: 'food', img: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=500&q=80', likes: 85 },
+            { id: 4, name: 'Street Art', cat: 'art', img: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=500&q=80', likes: 230 },
+            { id: 5, name: 'Sunset Point', cat: 'view', img: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=500&q=80', likes: 67 },
+        ];
+
+        let spots = JSON.parse(localStorage.getItem('spotpotes_v3')) || INITIAL_DATA;
+        let map = null;
+        let selectedCategory = 'all';
+        let currentUpload = null;
+        let newSpotCat = 'bar';
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategories();
+            renderFeed();
+            updateStats();
+        });
+
+        // --- RENDERERS ---
+        function renderCategories() {
+            const container = document.querySelector('.categories-scroll');
+            container.innerHTML = '';
+            
+            Object.entries(CATEGORIES).forEach(([key, data]) => {
+                const isActive = key === selectedCategory ? 'active' : '';
+                const count = key === 'all' ? spots.length : spots.filter(s => s.cat === key).length;
+                
+                container.innerHTML += `
+                    <div class="cat-pill ${isActive}" onclick="filterFeed('${key}')">
+                        <div class="cat-circle">
+                            ${data.icon}
+                            ${count > 0 ? `<div class="cat-badge">${count}</div>` : ''}
+                        </div>
+                        <span class="cat-label">${data.label}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderFeed() {
+            const container = document.getElementById('feed-grid');
+            const profileGrid = document.getElementById('profile-grid');
+            container.innerHTML = '';
+            if(profileGrid) profileGrid.innerHTML = '';
+
+            const filtered = selectedCategory === 'all' ? spots : spots.filter(s => s.cat === selectedCategory);
+            // Reverse to show newest first
+            const displayList = [...filtered].reverse();
+
+            const html = displayList.map(spot => `
+                <div class="spot-card">
+                    <img src="${spot.img}" class="spot-img" loading="lazy">
+                    <div class="spot-overlay">
+                        <div class="spot-title">${spot.name}</div>
+                        <div class="spot-meta">
+                            <svg class="icon icon-sm icon-fill" style="color: var(--accent)" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                            ${spot.likes}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+            if(profileGrid) profileGrid.innerHTML = html; // Simple mirror for demo
+        }
+
+        // --- ACTIONS ---
+        function filterFeed(cat) {
+            selectedCategory = cat;
+            renderCategories();
+            renderFeed();
+        }
+
+        function switchView(viewName, navEl = null) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            
+            if(navEl) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                navEl.classList.add('active');
+            }
+
+            if(viewName === 'map') initMap();
+        }
+
+        function openAddModal() {
+            document.getElementById('add-modal').classList.add('open');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-modal').classList.remove('open');
+            // Reset
+            setTimeout(() => {
+                document.getElementById('preview-img').style.display = 'none';
+                document.getElementById('photo-placeholder').style.display = 'flex';
+                document.getElementById('spot-name').value = '';
+                currentUpload = null;
+            }, 300);
+        }
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentUpload = e.target.result;
+                    document.getElementById('preview-img').src = currentUpload;
+                    document.getElementById('preview-img').style.display = 'block';
+                    document.getElementById('photo-placeholder').style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function selectCat(cat, btn) {
+            newSpotCat = cat;
+            document.querySelectorAll('.tag-btn').forEach(b => {
+                b.style.background = 'var(--surface)';
+                b.style.color = 'var(--text-main)';
+                b.style.borderColor = 'var(--border)';
+            });
+            btn.style.background = 'var(--text-main)';
+            btn.style.color = 'white';
+            btn.style.borderColor = 'var(--text-main)';
+        }
+
+        function saveSpot() {
+            const name = document.getElementById('spot-name').value;
+            if(!name) return alert('Donne un nom à ton spot !');
+
+            const newSpot = {
+                id: Date.now(),
+                name: name,
+                cat: newSpotCat,
+                img: currentUpload || 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=500&q=80', // Fallback aesthetic
+                likes: 0
+            };
+
+            spots.push(newSpot);
+            localStorage.setItem('spotpotes_v3', JSON.stringify(spots));
+            
+            closeAddModal();
+            selectedCategory = 'all'; // Reset filter to show new item
+            renderCategories();
+            renderFeed();
+            updateStats();
+            
+            // Scroll top
+            document.querySelector('.main-content').scrollTop = 0;
+        }
+
+        function updateStats() {
+            const el = document.getElementById('stat-spots');
+            if(el) el.textContent = spots.length;
+        }
+
+        function resetApp() {
+            localStorage.removeItem('spotpotes_v3');
+            location.reload();
+        }
+
+        // --- MAP ---
+        function initMap() {
+            if(map) { map.invalidateSize(); return; }
+            
+            map = L.map('map', { zoomControl: false }).setView([48.8566, 2.3522], 13);
+            
+            // CartoDB Voyager : Fond de carte très propre/minimaliste
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Fake markers styled
+            const iconHtml = `<div style="background:var(--text-main); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`;
+            const icon = L.divIcon({ className: 'custom-pin', html: iconHtml });
+
+            // Random markers around Paris
+            for(let i=0; i<5; i++) {
+                L.marker([48.85 + (Math.random()-0.5)*0.05, 2.35 + (Math.random()-0.5)*0.05], {icon: icon}).addTo(map);
+            }
+        }
+
+    </script>
+</body>
+</html>
